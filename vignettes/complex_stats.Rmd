@@ -1,0 +1,309 @@
+---
+title: "Statistics with Complex Variates"
+author:
+ - name: Michael Weylandt
+   affiliation: Department of Statistics, Rice University
+   email: michael.weylandt@rice.edu
+date: "2020-03-16"
+output: 
+  html_document: 
+    toc: true
+    toc_float: 
+      collapsed: false
+bibliography: vignettes.bibtex
+vignette: >
+  %\VignetteIndexEntry{Statistics with Complex Variates}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+\[
+\DeclareMathOperator{\argmin}{arg\,min}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\trace}{Trace}
+\newcommand{\bI}{\mathbf{I}}
+\newcommand{\bM}{\mathbf{M}}
+\newcommand{\ba}{\mathbf{a}}
+\newcommand{\bo}{\mathbf{o}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bv}{\mathbf{v}}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\bz}{\mathbf{z}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bW}{\mathbf{W}}
+\newcommand{\bg}{\mathbf{g}}
+\newcommand{\bV}{\mathbf{V}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bZ}{\mathbf{Z}}
+\newcommand{\bSigma}{\mathbf{\Sigma}}
+\newcommand{\bTheta}{\mathbf{\Theta}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\im}{\mathfrak{i}}
+\newcommand{\bmu}{\mathbf{\mu}}
+\newcommand{\bzero}{\mathbf{0}}
+\DeclareMathOperator{\Var}{\text{Var}}
+\DeclareMathOperator{\Cov}{\text{Cov}}
+\DeclareMathOperator{\prox}{\textsf{prox}}
+\]
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo = FALSE}
+#library(classo)
+```
+
+Traditionally, statistics has focused on real- and integer-valued data. Such data,
+more or less directly observable, has been the subject of a a rich toolbox of
+statistical methodologies and supporting `R` packages. Complex-valued data, by contrast,
+has been the subject of far less investigation by the statistical community, with the
+field of statistical signal processing being a prominent and influential exception.
+Recent developments in neuroscience[^1] [@Yu:2018], geosciences [@Iaco:2003; @Mandic:2009; @Iaco:2013],
+and econometrics [@Granger:1983], among others, have reignited interest in
+the statistical analysis of complex-valued data. 
+
+The `classo` package provides some basic tools for dealing with complex-valued
+data. In this vignette, we introduce some of the surprising features of
+complex-valued data and necessary adjustments to classical techniques. 
+
+## Statistics with Complex-Valued Data
+
+### Second-Order Properties
+
+Given a data matrix, $\bZ \in \C^{n \times p}$ formed from $n$ independent
+observations of a complex $p$-vector, the sample mean $\overline{\bz}$ behaves much
+as its real counterpart. In particular, if $\bz$ is a complex random vector, the
+sample mean \[\overline{\bz} = \frac{1}{n} \sum_{i=1}^n \bz_i\] is an unbiased 
+estimate of the population mean $\E[\bz]$. 
+
+Turning to second moments, however, we first encounter the novelties of the
+complex domain. In particular, there are two potential generalizations of the
+sample *covariance*: 
+\[\hat{\bSigma} = \frac{\bZ^H\bZ}{n} \quad \text{ and } \quad \hat{\bR} = \frac{\bZ^T\bZ}{n}\]
+(For simplicity, we assume $\bZ$ is known to be zero-mean in this discussion.)
+While it is obvious that these two estimates coincide in the real case, it is less
+obvious that they differ in the complex case. Looking more closely, we see the
+difference: 
+\[\hat{\Sigma}_{12} = \frac{1}{n}\sum_{i=1}^n (\bZ^H)_{1i} (\bZ)_{i2} = \frac{1}{n}\sum_{i=1}^n \overline{z}_{i1}z_{i2} = \frac{1}{n}\sum_{i=1}^n (x_{i1}x_{i2}+y_{i1}y_{i2}) + \im (x_{i1}y_{i2} - x_{i1}y_{i1}) \]
+where $x_{i1} = \Re(z_{ij})$ and $y_{i1} = \Im(z_{ij})$ are respectively the real
+and imaginary parts of $z_{ij}$, that is, the $j$-th element of the $i$-th observation.
+A similar analysis gives
+\[\hat{R}_{12} = \frac{1}{n}\sum_{i=1}^n (x_{i1}x_{i2} - y_{i1}y_{i2}) + \im (x_{i1}y_{i2} + x_{i1}y_{i1}) \]
+Comparing these, we see that not only are $\hat{\bSigma}$ and $\hat{\bR}$ in general
+different, but we cannot recover one from the other.[^3]
+
+Which then is the natural generalization of the covariance? If we consider
+$\hat{\bSigma}$ and $\hat{\bR}$ as estimators of population quantities, we are
+lead to a somewhat satisfactory answer. In particular, note that $\hat{\bSigma}$
+and $\hat{\bR}$ are unbiased esimtaors of the population quantities
+\[\bSigma = \E[\bZ\bZ^H] \quad \text{ and } \bR = \E[\bZ\bZ^T]\]
+respectively. In many applications, it is reasonable to assume that the (absolute)
+phase of elements of $\bz$ doesn't matter: for instance, if let $\bZ$ be the Fourier
+transform of (a segment of) a stationary process, only the relative phase of $\bZ$
+has real meaning. (The absolute phase is an artifact of our observation window.)
+In this case, we may assume $\bZ$ is a so-called *proper* or *circularly-symmetric*
+random variable, satisfying
+\[\text{Law}[e^{\im\theta}\bZ] = \text{Law}[\bZ] \quad \text{ for all } \theta \in [0, 2\pi)\]
+For a proper $\bZ$, we must have
+\[\bR_{\bZ} = \E[\bZ\bZ^T] = \E\left[\left(e^{\im\theta}\bZ\right)\left(e^{\im\theta}\bZ\right)\right]=e^{2\im\theta}\E[\bZ\bZ^T] = e^{2\im\theta}\bR_{\bZ}\]
+For the left and right sides to be equal for all $\theta$, we must have $\bR_{\bZ} = \bzero$.
+Because $\bR$ is zero for all proper complex random variables, we take $\bSigma = \E[\bZ\bZ^H]$
+to be the *covariance* of the random vector $\bZ$. The matrix $\bR$ is typically
+refered to as the *relation* or *pseudo-covariance* matrix. 
+
+The covariance and relation matrices satisfy several useful properties: 
+
+- the covariance matrix is unchanged under phase shift: 
+  \[\bSigma_{e^{\im\theta}\bZ} = \E[(e^{\im\theta}\bZ)(e^{\im\theta}\bZ)^H] = \E[e^{\im\theta}\bZ e^{-\im\theta}\bZ^H] = e^{\im(\theta - \theta)}\E[\bZ\bZ^H] = \bSigma_{\bZ}\]
+- the covariance matrix is Hermitian and positive (semi-)definite: 
+  \[\bSigma_{\bZ}^H = \E[\bZ\bZ^H]^H = \E[(\bZ\bZ^H)^H] = \E[\bZ\bZ^H] = \Sigma_{\bZ}\]
+  \[\ba^H\bSigma\ba = \ba^H\E[\bZ\bZ^H]\ba = \E[(\bZ\overline{\ba})^T(\bZ^H\ba)] = \E[(\bZ^H\ba)^H(\bZ^H\ba)] = \E[\|\bZ^H\ba\|_2^2] \geq 0 \]
+- the relation matrix is symmetric: 
+  \[\bR_{\bZ}^T = \E[\bZ\bZ^T]^T = \E[(\bZ\bZ^T)^T] = \E[\bZ\bZ^T] = \bR_{\bZ}\]
+- $\bSigma$ and $\bR$ satisfy the following relationship, due to Picinbono [-@Picinbono:1996, Section 2]:
+  \[\overline{\bSigma} - \bR^H\bSigma^{-1}\bR \succeq \bzero\]
+  To see this, consider the random variable $\bW = [\bZ, \overline{\bZ}]^T$. The
+  covariance of $\bW$ is given by
+  \[\bSigma_{\bW} = \E[\bW\bW^H] = \E\left[\begin{pmatrix} \bZ \\ \overline{\bZ}\end{pmatrix}\begin{pmatrix} \bZ \\ \overline{\bZ}\end{pmatrix}^H\right] = \E\left[\begin{pmatrix}\bZ \\ \overline{\bZ}\end{pmatrix}\begin{pmatrix} \bZ^H & \bZ^T\end{pmatrix}\right] = \E\left[\begin{pmatrix}\bZ\bZ^H & \bZ\bZ^T \\ \overline{\bZ}\bZ^H & \overline{\bZ}\bZ^T \end{pmatrix}\right] = \begin{pmatrix} \bSigma_{\bZ} & \bR_{\bZ} \\ \overline{\bR_{\bZ}} & \overline{\bSigma_{\bZ}} \end{pmatrix}\]
+  Because $\bSigma_{\bW}$ is a covariance matrix, we know it is positive semi-definite
+  and hence can perform a block Cholesky ($LDL^H$-type) decomposition to get
+  \[\bSigma_{\bW} = \begin{pmatrix} \bI & \bzero \\ \bR_{\bZ}^H\bSigma^{-1}_{\bZ} & \bzero \end{pmatrix} \begin{pmatrix} \bSigma_{\bZ} & \bzero \\ \bzero & \overline{\bSigma_{\bZ}} - \bR^H_{\bZ}\bSigma_{\bZ}^{-1}\bR_{\bZ} \end{pmatrix} \begin{pmatrix} \bI & \bzero \\ \bR_{\bZ}^H\bSigma_{\bZ}^{-1} & \bI\end{pmatrix}^H\]
+  By properties of the block Cholesky, the middle matrix must be positive semi-definite
+  and hence both $\bSigma_{\bZ}$ and $\overline{\bSigma} - \bR^H_{\bZ}\bSigma_{\bZ}^{-1}\bR_{\bZ}$
+  must be positive semi-definite, as desired.
+  
+The same properties hold for the sample versions $\hat{\bSigma}$ and $\hat{\bR}$,
+as can be shown directly or by considering $\hat{\bSigma}$ and $\hat{\bR}$ as 
+the covariance and relation of the empirical distribution. 
+
+Breaking $\bZ$ into two real random vectors satisfying $\bX + \im\bY$, we have the
+following properties which can be verified directly:[^4]
+
+  - $\Var(\bX) = \Cov(\bX, \bX) = \frac{1}{2}\Re(\bSigma_{\bZ} + \bR_{\bZ})$
+  - $\Var(\bY) = \Cov(\bY, \bY) = \frac{1}{2}\Re(\bSigma_{\bZ} + \bR_{\bZ})$
+  - $\Cov(\bX, \bY) = \frac{1}{2}\Im(\bSigma_{\bZ} + \bR_{\bZ})$
+  - $\Cov(\bY, \bX) = \frac{1}{2}\Im(-\bSigma_{\bZ} + \bR_{\bZ})$. 
+  
+These imply reverse constructions: 
+
+  - $\bSigma_{\bZ} = \Var(\bX) + \Var(\bY) + \im(\Cov(\bY, \bX) - \Cov(\bX, \bY))$
+  - $\bR_{\bZ} = \Var(\bX) - \Var(\bY) + \im(\Cov(\bY, \bX) + \Cov(\bX, \bY))$
+
+In practice, it is not straightforward to test if a random variable if proper, or
+even if it has a zero relation matrix, without additional assumptions. In the sequel, 
+we consider the case of both proper and improper $\bZ$. We will not consider higher 
+moments here.
+
+### The Complex Gaussian Distribution
+
+As in the real case, the Gaussian distribution is the foundation of much
+statisitcal theory in the complex case. As our discussion above might suggest, 
+the complex Gaussian is, unlike its real counterpart, a *three-parameter* distribution, 
+characterized by its mean vector, covariance matrix, and relation matrix. The 
+proper complex Gaussian, *i.e.*, the one with zero relation matrix, is an important
+special case, dating back to the work of Goodman [-@Goodman:1963], if not earlier.
+
+We call a random complex $p$-vector $\bZ$ Gaussian if its real and imaginary components
+$\bX = \Re(\bZ)$ and $\bY = \Im(\bY)$ are jointly Gaussian.[^2] In this case, the 
+density of $\bz$ can be obtained by manipulating the joint density of $(\bx, \by)$
+to obtain the general form of the complex multivariate Gaussian density given by
+\[p(\bz) = \frac{\exp\left\{-\frac{1}{2}(\begin{pmatrix} \bz & \overline{\bz}\end{pmatrix} - \begin{pmatrix} \bmu & \overline{\bmu}\end{pmatrix})^H\begin{pmatrix} \bSigma_{\bZ} & \bR_{\bZ} \\ \overline{\bR_{\bZ}} & \overline{\bSigma_{\bZ}} \end{pmatrix}^{-1}(\begin{pmatrix} \bz & \overline{\bz}\end{pmatrix} - \begin{pmatrix} \bmu & \overline{\bmu}\end{pmatrix})\right\}}{\pi^p\sqrt{\det\begin{pmatrix}\bSigma_{\bZ} & \bR_{\bZ} \\ \overline{\bR_{\bZ}} & \overline{\bSigma_{\bZ}} \end{pmatrix}}} .\]
+See, *e.g.*, Section 2.3, especially Equation 2.48, of the book by 
+Schreier and Scharf [-@Schreier:2010], though their notation is different than 
+what we use here. 
+
+In the special case of a mean-zero proper random variable ($\bR_{\bZ} = \bzero$),
+this simplifies significantly to 
+\[p(\bz) = \frac{\exp\left\{-(\bz - \bmu_{\bz})^H\bSigma_{\bZ}^{-1}(\bz - \bmu_{\bz})\right\}}{\pi^p \det \bSigma_{\bZ}} = \pi^{-p}\det(\bTheta_{\bZ})\exp\left\{-(\bz - \bmu_{\bz})^H\bTheta_{\bZ}(\bz - \bmu_{\bz})\right\}\]
+where $\bTheta_{\bZ} = \bSigma_{\bZ}^{-1}$. Note the missing $1/2$ terms in the
+quadratic form and the normalizing constant; these vanish due to the "two-vector"
+structure of $\C$.
+
+The mean-zero scalar case is of particular importance for the regression context.
+Letting $Z = X + \im Y$ with $X, Y$ jointly Gaussian real scalar variables, we
+have two second-order characterizations $\Sigma_Z = \E[|Z|^2]$ and $R_Z = \E[Z^2]$.
+The ratio $\rho = R_Z / \Sigma_Z$ is the correlation between $Z$ and $\overline{Z}$
+and is a measure of the impropriety of $Z$. For general scalar $Z$, the PDF is
+given by 
+\[p(z) = \frac{1}{\pi \Sigma_Z \sqrt{1 - |\rho|^2}}\exp\left\{-\frac{|z|^2 - \Re(\rho \overline{z}^2)}{\Sigma_Z(1-|\rho|^2)}\right\}\]
+which simplifies to 
+\[p(z) = \frac{1}{\pi\Sigma_Z}\exp\left\{-\frac{|z|^2}{\Sigma_Z}\right\}\]
+when $Z$ is proper.
+
+### Unsupervised Methods
+
+#### Principal Components Analysis
+
+#### Graphical Models
+
+For proper Gaussian random variables, the maximum penalized likelihood estimator
+of $\bTheta_{\bZ} = \bSigma_{\bZ}^{-1}$ is given by
+\[\hat{\bTheta_{\bZ}} = \argmin_{\bTheta \in \C^{p \times p}_{\succeq 0}} \log \det \bTheta -  \]
+
+### Supervised Methods
+
+#### Linear Regression
+
+#### Penalized Linear Regression
+
+## Computational Support
+
+Base `R` provides basic tooling for complex numbers (see `?complex`) but this functionality
+is limited to basic arithmetic. The CRAN package `cmvrnorm` provides richer 
+functionality including a PRNG for the proper case of the complex univariate and
+multivariate Gaussian distributions [@Hankin:2019]. The `cpd` package provides
+maximum-likelihood estimation for a class of count-distributions with complex 
+parameters [@Lopez:2019]. Outside of `R`, the `cgeostat` software [@Iaco:2017]
+provides rich spatial statitsics functionality for complex-valued random fields.
+
+The `classo` package provides a full suite of functionality for visualization, 
+dimension reduction, and basic statistical modeling of complex-valued data. Because
+`classo` does not assume the data comes from a proper distribution, some of the scaling
+conventions are different than those provided by `cmvnorm.`
+
+### Distribution Functions
+
+`classo` provides density functions and PRNGs for the univariate and multivariate
+complex Gaussian. To support both the general case of improper Gaussians and the
+special, but common, case of proper Gaussians, a unified interface based on a 
+*complex covariance specification* or `cplx_cov_spec` is used. Conceptually, a
+`cplx_cov_spec` is simply the pair of parameters $(\bSigma_{\bZ}, \bR_{\bZ})$ that
+characterize the complex Gaussian. Internally, a `cplx_cov_spec` converts between
+the theoretically convenient $(\bSigma_{\bZ}, \bR_{\bZ})$ representation, a pair
+of $p \times p$ complex matrices, and the computationally convenient $2p \times 2p$
+covariance of the real and imaginary parts of $\bZ$. This conversion should be
+transparent to the user. 
+
+A covariance specification is a simple `S3` class containing three matrices:
+$\bSigma_{\bZ}$,  $\bR_{\bZ}$, and $\bW = \Var([\Re(\bZ) \, \, \Im(\bZ)])$. 
+There are four valid ways to call the constructor: 
+
+- `cplx_cov_spec(Sigma = Sigma)`: given a $p \times p$ complex positive-definite
+  matrix `Sigma`, generates a covariance specification for a *proper* $p$-variate
+  complex Gaussisan with covariance `Sigma`. Equivalent to `cplx_cov_spec(Sigma = Sigma, R = R)`.
+- `cplx_cov_spec(Sigma = Sigma, R = R)`: given a $p \times p$ positive-definite
+  Hermitian matrix `Sigma` and a $p \times p$ symmetric matrix `R`, generates a 
+  covariance specification for an *improper* $p$-variate complex Gaussian with
+  covariance `Sigma` and relation matrix `R`. 
+- `cplx_cov_spec(W = W)` given a $(2p) \times (2p)$ real positive-definite matrix
+  `W`, generates a covariance specification for a $p$-variate complex Gaussian
+  such that `W` is the (real) covariance of its real and imaginary parts. 
+- `cplx_cov_spec(A = A)` given a $(2p) \times (2p)$ complex positive-definite
+  matrix `A` satisfying the *augmented covariance* conditions (given below), generates
+  a covariance specification for a $p$-variate complex Gaussian such that `A` is
+  the (complex) covariance of $[\bZ \, \, \overline{\bZ}]$. 
+  
+The final constructor, based on the augmented covariance matrix, does not store `A`
+as `A` is not useful for computation, but is included for completeness. The first 
+and second constructors also support a simplified form where `Sigma`, and possibly `R`, 
+are scalars for the univariate case. 
+
+### Density and PRNG Functions
+
+The `classo` function provides probability density (`d`) and random number generation
+(`r`) functions for the univariate and multivariate Gaussian distributions.
+Internally, these functions work by "unpacking" the complex information into real
+and imaginary parts and passing the arguments along to the corresponding functions
+in the `mvtnorm` package. At this time, the distribution (`p`) and quantile (`q`)
+functions are not supported.
+
+The main functions are: 
+
+- `dcnorm(x, mean = 0 + 0i, cov = cplx_cov_spec(Sigma = 1), log = FALSE)`
+- `rcnorm(n, mean = 0 + 0i, cov = cplx_cov_spec(Sigma = 1))`
+- `dmvcnorm(x, mean = rep(0 + 0i, p), cov = cplx_cov_spec(Sigma = diag(1, p)), log = FALSE)`
+- `rmvcnorm(n, mean = rep(0 + 0i, NROW(cov$Sigma)), cov = cplx_cov_spec(Sigma = diag(1, length(mean))))`
+
+See the documentation for examples of usage. 
+
+### Data Summarization
+
+
+
+## References
+
+[^1]: Indeed, in the neuroscientific context, spectral approaches are the default
+for many analyses: the popular science notion of "brain waves" properly refers
+to the Fourier decomposition of neural activity.
+
+[^2]: We do not consider the case of degenerate covariance here.
+
+[^3]: While they can vary independently, there are at least some joint constraints
+on $\bR$ and $\bSigma$. For instance, Picinbono [-@Picinbono:1996] showed that
+they satisfy a positive-definite Schur complement-type condition given below.
+
+[^4]: In particular, note 
+\[\bSigma_{\bZ} = \E[(\bX + \im \bY)(\bX + \im \bY)^H] = \E[(\bX + \im\bY)(\bX - \im\bY)^T] = \E[\bX\bX^T + \bY\bY^T+ \im(\bY\bX^T -\bX\bY^T)] = \Var(\bX) + \Var(\bY) + \im(\Cov(Y, X) - \Cov(X, Y))\]
+and similarly
+\[\bR_{\bZ} = \E[(\bX + \im \bY)(\bX + \im \bY)^T] = \E[\bX\bX^T - \bY\bY^T+ \im(\bY\bX^T +\bX\bY^T)] = \Var(\bX) - \Var(\bY) + \im(\Cov(Y, X) + \Cov(X, Y)).\]
+Rearranging and matching terms, we get the desired results.

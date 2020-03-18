@@ -1,0 +1,169 @@
+---
+title: "The Complex Lasso and Complex Graphical Lasso"
+author:
+ - name: Michael Weylandt
+   affiliation: Department of Statistics, Rice University
+   email: michael.weylandt@rice.edu
+date: "2020-03-17"
+output: 
+  html_document: 
+    toc: true
+    toc_float: 
+      collapsed: false
+bibliography: vignettes.bibtex
+vignette: >
+  %\VignetteIndexEntry{The Complex Lasso and Complex Graphical Lasso}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+\[
+\DeclareMathOperator{\argmin}{arg\,min}
+\DeclareMathOperator{\sign}{sign}
+\DeclareMathOperator{\trace}{Trace}
+\newcommand{\bI}{\mathbf{I}}
+\newcommand{\bM}{\mathbf{M}}
+\newcommand{\ba}{\mathbf{a}}
+\newcommand{\bb}{\mathbf{b}}
+\newcommand{\bo}{\mathbf{o}}
+\newcommand{\br}{\mathbf{r}}
+\newcommand{\bv}{\mathbf{v}}
+\newcommand{\bu}{\mathbf{u}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bLambda}{\mathbf{\Lambda}}
+\newcommand{\bU}{\mathbf{U}}
+\newcommand{\bP}{\mathbf{P}}
+\newcommand{\bQ}{\mathbf{Q}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bY}{\mathbf{Y}}
+\newcommand{\by}{\mathbf{y}}
+\newcommand{\bz}{\mathbf{z}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bW}{\mathbf{W}}
+\newcommand{\bg}{\mathbf{g}}
+\newcommand{\bV}{\mathbf{V}}
+\newcommand{\bR}{\mathbf{R}}
+\newcommand{\bZ}{\mathbf{Z}}
+\newcommand{\bSigma}{\mathbf{\Sigma}}
+\newcommand{\bTheta}{\mathbf{\Theta}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\im}{\mathfrak{i}}
+\newcommand{\bbeta}{\mathbf{\beta}}
+\newcommand{\bmu}{\mathbf{\mu}}
+\newcommand{\bzero}{\mathbf{0}}
+\DeclareMathOperator{\Var}{\text{Var}}
+\DeclareMathOperator{\Cov}{\text{Cov}}
+\DeclareMathOperator{\prox}{\textsf{prox}}
+\DeclareMathOperator{\Tr}{\text{Tr}}
+\]
+
+In this vignette, we give additional details of the sparse regression and graphical
+model estimators and algorithms implemented in the `classo` package. 
+
+## Complex Lasso
+
+The first, and simplest, estimator considered in this package is the *complex lasso*,
+given by
+\[\argmin_{\bbeta \in \C^p} \frac{1}{2n} \|\by - \bX\bbeta\|_2^2 + \lambda\|\bbeta\|_1\]
+
+To solve the complex lasso, we employ the coordinate descent approach popularized
+by the `glmnet`, `ncvreg`, and `grpreg` packages [@Friedman:2010; @Breheny:2011; @Breheny:2015].
+To use coordinate descent, we have to solve the above problem for a single element
+of $\beta$ at a time, leaving all other predictors fixed. Because the $\ell_1$-penalty
+is separable across coordinates, the updates take a simple form: 
+\[\beta_i \leftarrow \argmin_{\beta \in \C} \frac{1}{2n} \|\br_i - \bX_{\cdot i}\beta \|_2^2 + \lambda|\beta|\]
+where $\br_i = \by - \sum_{j \neq i} \bX_{\cdot j}\beta_j$ is the working residual
+at each iteration. This can be further simplified by factoring the quadratic term
+to obtain: 
+\[\argmin_{\beta \in \C} \frac{\|\br_i\|_2^2 -2\langle \br_i, \bX_{\cdot i}\beta\rangle + \|\bX_{\cdot i}\|_2^2|\beta|^2}{2n} + \lambda|\beta| = \]
+where $2\langle \ba , \bb \rangle = \ba^H\bb + \ba^T\overline{\bb}$. Diving through by $\|\bX_{\cdot i}\|_2^2$ and completing the square, we obtain the update: 
+\[\beta_i \leftarrow \argmin_{\beta \in \C} \frac{1}{2}\left\|\beta - \frac{\bX_{i\cdot}^H\br_i}{\|\bX_{i\cdot}\|_2^2}\right\|_2^2 + \frac{n \lambda}{\|\bX_{\cdot i}\|^2_2} |\beta| = \prox_{n\lambda / \|\bX_{\cdot i}\|_2^2 |\cdot |}\left(\frac{\bX_{i\cdot}^H\br_i}{\|\bX_{i\cdot}\|_2^2}\right) = \mathcal{S}_{n\lambda / \|\bX_{\cdot i}\|_2^2}\left(\frac{\bX_{i\cdot}^H\br_i}{\|\bX_{i\cdot}\|_2^2}\right)\]
+where $\prox_f(\bz) = \argmin_{\bw} \frac{1}{2}\|\bz-\bw\| + f(\bw)$ is the proximal operator $f$ and $\mathcal{S}_{\lambda}(\bx)$ is the soft-thresholding operator at level $\lambda$. Recalling that $\mathcal{S}_{c\lambda}(cx) = c\mathcal{S}_{\lambda}(x)$, we obtain the final update
+\[\beta_i \leftarrow \frac{1}{\|\bX_{\cdot i}\|_2^2}\mathcal{S}_{n\lambda}(\bX_{i\cdot}^H\br_i)\]
+which mirrors the update for the real lasso. 
+
+The `classo` package implements a more general form of this algorithm, with support
+for a mixture of $\ell_1$ and $\ell_2$ penalization (the *elastic net* [@Zou:2005]), 
+regression offsets, and observation weights. 
+
+## Complex Graphical Lasso - Full-Likelihood
+
+### Proper
+
+If $\bZ \in \C^{n \times p}$ is assumed to follow a mean-zero proper complex multivariate
+Gaussian distribution, then the log-likelihood is given by 
+\[\mathcal{L}(\bSigma) = \sum_{i=1}^n -p\log \pi -\log \det(\bSigma) - \bz^H_i\bSigma^{-1}\bz_i = -np\log \pi - n\log \det \bSigma -\sum_{i=1}^n \bz_i^H\bSigma^{-1}\bz_i.\]
+The final term can be rewritten as
+\[\sum_{i=1}^n \bz_i^H\bSigma^{-1}\bz_i = \sum_{i=1}^n \Tr(\bz_i^H\bSigma^{-1}\bz_i) = \sum_{i=1}^n \Tr(\bSigma^{-1}\bz_i\bz_i^H) = \Tr\left(\bSigma^{-1}\left[\sum_{i=1}^n\bz_i\bz_i^H\right]\right) = \Tr(\bSigma^{-1} n\hat{\bSigma}) = n\Tr(\bSigma^{-1}\hat{\bSigma})\]
+Rewriting the likelihood in terms of the natural paramter $\bTheta = \bSigma^{-1}$, we thus obtain:[^1]
+\[\mathcal{L}(\bTheta) = -np\log \pi + n\log \det \bTheta - n \Tr(\bTheta\hat{\bSigma})\]
+Dropping the leading constants, rescaling by $n^{-1}$, and adding an $\ell_1$-penalty
+to the off-diagonal elements of $\bSigma$, we get the following maximum penalized 
+likelihood estimator, which we term the *Complex Graphical Lasso* or C-GLasso: 
+\[\argmin_{\bTheta \in \C^{p \times p}_{\succeq 0}} -\log \det \bTheta + \Tr(\bTheta\hat{\bSigma}) + \lambda \|\bTheta\|_{1, \text{off-diag}} \text{ where } \hat{\bSigma} = \bX^H\bX/n\]
+
+To solve this problem, we use a simple ADMM approach, as described in Section 6.5
+of the monograph by Boyd *et al.* [-@Boyd:2011].[^2] In this case, the ADMM consists
+of iterating the following updates: 
+\[\begin{align*} \bP^{(k+1)} &\leftarrow \bQ\left(\frac{\lambda_i + \sqrt{\lambda_i^2 + 4\rho}}{2\rho}\right)_{ii}\bQ^H \quad \text{ where } \bQ\bLambda\bQ^H = \rho(\bTheta^{(k)}-\bU^{(k)}) - \hat{\bSigma}\\ \bTheta^{(k+1)} &\leftarrow \mathcal{S}_{\lambda / \rho \|\cdot\|_{1, \text{off-diag}}}(\bP^{(k+1)} + \bU^{(k)}) \\ \bU^{(k+1)} &\leftarrow \bU^{(k)} + \bP^{(k+1)} - \bTheta^{(k+1)} \end{align*}\]
+The computational bottleneck of this method is the eigendecomposition in the
+$\bP$-update step ($\mathcal{O}(p^3)$), but for problems of moderate size, this
+is not prohibitive. 
+
+### Improper
+
+Graphical model esitmation for potentially improper Gaussian distributions is 
+not yet supported.
+
+## Complex Graphical Lasso - Pseudo-Likelihood
+
+### Proper
+
+Meinshausen and Bühlmann [-@Meinshausen:2006] proposed an alternative estimation
+technique which does not require working with the exact likelihood. Their pseudo-likelihood
+"neighborhood selection" technique has since been extended to a variety of non-Gaussian
+graphical models [@Ravikumar:2010; @Yang:2015]. In brief, these methods leverage
+the characterization of the conditional mean of one node of a graph as a linear 
+combination of its (sparse) neighborhood.[^3] Hence, to estimate the neighborhood
+of a node, it suffices to use a sparse regression method and to take the non-zero
+coefficients as (proportional to) edge weights. 
+
+In the specific case of a proper complex multivariate Gaussian, the complex lasso
+described above can be used to power a neighborhood selection approach. Specifically, 
+
+
+### Improper
+
+Graphical model esitmation for potentially improper Gaussian distributions is 
+not yet supported.
+
+## References
+
+```{r setup, eval = FALSE}
+library(classo)
+```
+
+[^1]: Comparing this to the likelihood for the real multivariate Gaussian, we note
+that this likelihood is missing a factor of $1/2$ in the log determinant term
+because the complex likelihood does not take the square root of the determinant.
+The complex likelihood also doesn't have a factor of $1/2$ in the trace term,
+following the probability density. Taken together, these two factors mean
+the likelihood problems have the same objective function, albeit on different domains.
+
+[^2]: Boyd *et al.* [-@Boyd:2011] cite Scheinberg *et al.* [-@Scheinberg:2010] as demonstrating
+the efficiency of the ADMM for the graphical lasso problem. The paper of Scheinberg
+*et al.*, however, includes additional performance optimizations not described by
+Boyd *et al.* We omit these optimizations and use the simpler method from Boyd *et al.*,
+though future versions of the `classo` package may include them.
+
+[^3]: This imposes some restrictions in the general case, but is exact for multivariate
+Gaussians.

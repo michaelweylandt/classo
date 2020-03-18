@@ -1,0 +1,14 @@
+template:
+  params:
+    bootswatch: flatly
+
+navbar:
+  type: inverse
+  right:
+    - icon: fa-github fa-lg
+      href: https://github.com/michaelweylandt/classo
+
+development:
+  mode: unreleased
+  version_label: info
+  version_tooltip: "classo is not yet on CRAN"

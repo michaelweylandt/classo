@@ -1,0 +1,38 @@
+Package: classo
+Type: Package
+Title: Efficient Algorithms for the Complex Lasso and Complex Graphical Lasso
+Version: 0.0
+Date: 2020-03-16
+Authors@R: c(
+    person("Michael", "Weylandt", role=c("aut", "cre"), email="michael.weylandt@rice.edu"))
+Description: Fit the complex lasso and complex graphical lasso using efficient 
+    coordinate descent and ADMM algorithms. Additionally provides utilities for 
+    data generation, model selection and visualization. 
+License: GPL (>= 3)
+Imports: Rcpp (>= 0.12.12), 
+         RColorBrewer, 
+         foreach, 
+         mvtnorm, 
+         ggplot2, 
+         tidygraph,
+         ggraph,
+         dplyr,
+         tibble,
+         patchwork, 
+         gtools
+LinkingTo: Rcpp, 
+           RcppArmadillo (>= 0.8.300.1.0)
+Suggests: 
+    testthat,
+    knitr,
+    microbenchmark,
+    glmnet,
+    grpreg,
+    covr,
+    rmarkdown,
+    cmvnorm
+VignetteBuilder: knitr
+GitHash: $GITHASH$
+BugReports: https://github.com/michaelweylandt/classo/issues
+URL: https://github.com/michaelweylandt/classo
+Encoding: UTF-8
