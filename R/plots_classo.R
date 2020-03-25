@@ -1,13 +1,12 @@
 #' Visualizing Complex Lasso Regularization Paths
 #'
-#' @importFrom gtools mixedsort
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom graphics plot lines text legend
 #' @importFrom stats runif
 #' @importFrom ggplot2 ggplot theme_bw scale_color_brewer geom_line
-#' @importFrom ggplot2 xlab ylab theme_bw ggtitle
+#' @importFrom ggplot2 xlab ylab theme_bw ggtitle aes coord_polar
 #' @importFrom patchwork plot_layout
-#' @importFrom dplyr filter mutate group_by ungroup %>% rename
+#' @importFrom dplyr filter mutate group_by ungroup %>% rename summarize top_n
 #' @export
 #' @param x An \code{CLassoFit} object produced by \code{\link{classo}}
 #' @param xvar Value to use on the x-axis (ordinate). \itemize{
@@ -32,6 +31,7 @@
 #'           while the \code{gg = TRUE} plots have are able to capture more of the
 #'           complex structure and have more adaptive defaults.
 #' @param ... Additional arguments passed to plotting functions
+#' @param n_highlight Number of "top" variables to display when \code{gg = TRUE}.
 #' @examples
 #' n <- 200
 #' p <- 500
@@ -113,7 +113,7 @@ plot.CLassoFit <- function(x,
 
                 if(do_label){
                     text_x <- range(xvar) * c(0.95, 1.05)
-                    text_x <- if(xvar_rev) min(text_x) else max(text_x)
+                    text_x <- min(text_x)
 
                     text(text_x, y[length(y)] * runif(1, 0.95, 1.05),
                          labels[i], col=col, offset=3)
@@ -128,7 +128,7 @@ plot.CLassoFit <- function(x,
         ## ggplot2 Plotting
 
         ## Get data ready to plot
-        plot_data <- as.data.frame(x) %>% filter(variable != "(Intercept)") %>%
+        plot_data <- as.data.frame(x) %>% filter(.data$variable != "(Intercept)") %>%
             mutate(Mod = Mod(.data$coef),
                    Re  = Re(.data$coef),
                    Im  = Im(.data$coef),
@@ -147,9 +147,7 @@ plot.CLassoFit <- function(x,
                                   pull(.data$variable)
 
         plot_data <- plot_data %>% filter(.data$variable %in% top_vars) %>%
-                                   mutate(variable = factor(.data$variable,
-                                                            levels = mixedsort(levels(.data$variable)),
-                                                            ordered = TRUE))
+                                   mutate(variable = naturalfactor(.data$variable))
 
         ## Create four "basic" plots - we will build these all "manuall"
         ## and then use patchwork to combine them in a nice layout

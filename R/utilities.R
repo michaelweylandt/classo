@@ -22,7 +22,6 @@ eye <- function(n){
 #'       in the \code{base} package, but use the Hermitian (conjugate) transpose
 #'       instead of the standard transpose.
 #' }
-#'
 #' @rdname classo_utilities
 #' @export
 im <- complex(real=0, imaginary=1)
@@ -149,6 +148,20 @@ mat_real_to_complex <- function(mat){
   x_ix <- 1:(p/2); y_ix <- (p/2+1):p
 
   mat[,x_ix] + im * mat[,y_ix]
+}
+
+# Make a factor which sorts in the "right" way
+#' @importFrom gtools mixedsort
+naturalfactor <- function(x){
+  if(is.factor(x)){
+    factor(x,
+           levels = mixedsort(levels(x)),
+           ordered = TRUE)
+  } else {
+    factor(x,
+           levels = mixedsort(unique(x)),
+           ordered = TRUE)
+  }
 }
 
 #-- Unused utilities from earlier versions --

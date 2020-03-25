@@ -19,7 +19,8 @@ Imports: Rcpp (>= 0.12.12),
          dplyr,
          tibble,
          patchwork, 
-         gtools
+         gtools, 
+         rlang
 LinkingTo: Rcpp, 
            RcppArmadillo (>= 0.8.300.1.0)
 Suggests: 
