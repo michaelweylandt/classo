@@ -134,6 +134,8 @@ plot.CLassoFit <- function(x,
                    Im  = Im(.data$coef),
                    Arg = Arg(.data$coef),
                    log_lambda = log(.data$lambda)) %>%
+            ## Move Arg() to [0, 2 * pi)
+            mutate(Arg = ifelse(.data$Arg < 0, .data$Arg + 2 * pi, .data$Arg)) %>%
             group_by(.data$variable) %>%
             filter(max(.data$Mod) != 0) %>%
             ungroup %>%
@@ -172,8 +174,19 @@ plot.CLassoFit <- function(x,
                                 ggtitle("Imaginary Part")
 
         # plot_arg is a bit distinctive
-        plot_arg <- plot_base + geom_line(aes(x = .data$Arg, y = !!as.symbol(xvar))) +
-                      ylab(xlabel) + coord_polar() + ggtitle("Argument (Phase)")
+        ## FIXME - This still looks a bit off - we can get weird "wraps" that shouldn't be there
+        ##         compare to geom_point() on the same.
+        ## geom_path gives better connections, but can still give weird wraps when
+        ## Arg(beta_hat) fidgets around 0....
+        plot_arg <- plot_base + geom_path(aes(x = .data$Arg, y = !!as.symbol(xvar))) +
+                      coord_polar(start = - pi / 2, direction = -1) + ggtitle("Argument (Phase)") +
+                      ylab(xlabel) + xlab(expression(Arg(hat(beta[j])))) +
+                      scale_x_continuous(breaks = c(0, pi / 2, pi, 3 * pi / 2),
+                                         labels = c(expression(0),
+                                                    expression(pi / 2),
+                                                    expression(pi),
+                                                    expression(3 * pi / 2)),
+                                         limits = c(0, 2 * pi))
 
         (plot_re + plot_im) / (plot_mod + plot_arg) + plot_layout(guides = "collect")
     }
