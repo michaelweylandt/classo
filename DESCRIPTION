@@ -33,7 +33,6 @@ Suggests:
     rmarkdown,
     cmvnorm
 VignetteBuilder: knitr
-GitHash: $GITHASH$
 BugReports: https://github.com/michaelweylandt/classo/issues
 URL: https://github.com/michaelweylandt/classo
 Encoding: UTF-8

@@ -4,7 +4,7 @@ author: "Michael Weylandt"
 date: "March 16, 2020"
 output:
   md_document:
-    variant: markdown_github
+    variant: gfm
 ---
 
 <!--  -*- coding: utf-8 -*- -->
@@ -19,7 +19,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-[![Travis-CI Build Status](https://api.travis-ci.com/michaelweylandt/classo.svg?branch=develop)](https://travis-ci.com/michaelweylandt/classo) [![codecov](https://codecov.io/gh/michaelweylandt/classo/branch/develop/graph/badge.svg)](https://codecov.io/gh/michaelweylandt/classo) [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/classo)](https://cran.r-project.org/package=classo) [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![GitHub Actions Build Status](https://github.com/michaelweylandt/classo/workflows/R-CMD-check and Deploy/badge.svg)](https://github.com/michaelweylandt/classo/actions?query=workflow%3A%22R-CMD-check+and+Deploy%22)
+[![Travis-CI Build Status](https://api.travis-ci.com/michaelweylandt/classo.svg?branch=develop)](https://travis-ci.com/michaelweylandt/classo)
+[![codecov](https://codecov.io/gh/michaelweylandt/classo/branch/develop/graph/badge.svg)](https://codecov.io/gh/michaelweylandt/classo)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
+[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/classo)](https://cran.r-project.org/package=classo)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 The `classo` package provides 
 

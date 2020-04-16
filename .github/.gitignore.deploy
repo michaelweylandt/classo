@@ -1,6 +1,3 @@
-# Travis deploy file
-deployed*
-
 # RStudio and R working files
 .Rproj.user
 .Rhistory
@@ -12,8 +9,7 @@ vignettes/*_files/
 vignettes/*.R
 
 # Platform specific compiled files
-src/*.gcno
-src/*.gcda
 src/*.o
 src/*.so
 src/*.dll
+inst/doc
